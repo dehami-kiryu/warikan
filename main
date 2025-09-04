@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スマート割り勘アプリ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+        .input-field {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+        }
+        .result-positive {
+            color: #16a34a;
+            font-weight: 600;
+        }
+        .result-negative {
+            color: #dc2626;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- ヘッダー -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">スマート割り勘アプリ</h1>
+            <p class="text-gray-600 mt-2">旅行やイベントでの面倒な計算をシンプルに。</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- 左側: 入力セクション -->
+            <div>
+                <!-- メンバー管理 -->
+                <div class="card">
+                    <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center"><i class="fas fa-users mr-2 text-blue-500"></i>メンバー管理</h2>
+                    <div class="flex gap-2">
+                        <input type="text" id="memberName" class="input-field" placeholder="メンバー名 (例: 山田)">
+                        <button onclick="addMember()" class="btn btn-primary flex-shrink-0">追加</button>
+                    </div>
+                    <ul id="memberList" class="mt-4 space-y-2">
+                        <!-- メンバーがここに追加されます -->
+                    </ul>
+                </div>
+
+                <!-- 支払い登録 -->
+                <div class="card">
+                    <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center"><i class="fas fa-wallet mr-2 text-green-500"></i>支払い登録</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="paidBy" class="block text-sm font-medium text-gray-600 mb-1">支払った人</label>
+                            <select id="paidBy" class="input-field"></select>
+                        </div>
+                        <div>
+                            <label for="amount" class="block text-sm font-medium text-gray-600 mb-1">金額 (円)</label>
+                            <input type="number" id="amount" class="input-field" placeholder="5000">
+                        </div>
+                        <div>
+                            <label for="description" class="block text-sm font-medium text-gray-600 mb-1">内容</label>
+                            <input type="text" id="description" class="input-field" placeholder="夕食代">
+                        </div>
+                        <button onclick="addPayment()" class="btn btn-primary w-full">支払いを記録</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側: 結果セクション -->
+            <div>
+                <!-- サマリー -->
+                <div class="card">
+                    <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center"><i class="fas fa-calculator mr-2 text-purple-500"></i>サマリー</h2>
+                    <div class="space-y-3 text-gray-600">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">合計金額:</span>
+                            <span id="totalAmount" class="font-bold text-2xl text-gray-800">0 円</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">メンバー数:</span>
+                            <span id="memberCount" class="font-bold text-lg text-gray-800">0 人</span>
+                        </div>
+                        <hr class="my-2">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">1人あたりの金額:</span>
+                            <span id="perPersonAmount" class="font-bold text-lg text-blue-600">0 円</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 各メンバーの支払い状況 -->
+                <div class="card">
+                    <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center"><i class="fas fa-chart-pie mr-2 text-yellow-500"></i>支払い状況</h2>
+                    <div id="paymentStatus" class="space-y-3">
+                        <!-- 支払い状況がここに追加されます -->
+                    </div>
+                </div>
+
+                <!-- 清算方法 -->
+                <div class="card">
+                     <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center"><i class="fas fa-exchange-alt mr-2 text-red-500"></i>清算方法</h2>
+                     <div id="settlement" class="space-y-2">
+                        <!-- 清算方法がここに追加されます -->
+                        <p class="text-gray-500 text-center">メンバーと支払いを追加してください。</p>
+                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 支払い履歴 -->
+        <div class="card mt-8">
+            <h2 class="text-xl font-bold text-gray-700 mb-4 flex items-center"><i class="fas fa-history mr-2 text-indigo-500"></i>支払い履歴</h2>
+            <div id="paymentHistory" class="space-y-2">
+                 <p class="text-gray-500 text-center">まだ支払いがありません。</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let members = [];
+        let payments = [];
+        let nextMemberId = 1;
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromLocalStorage();
+            updateUI();
+        });
+
+        function addMember() {
+            const memberNameInput = document.getElementById('memberName');
+            const name = memberNameInput.value.trim();
+
+            if (name && !members.some(m => m.name === name)) {
+                members.push({ id: nextMemberId++, name: name });
+                memberNameInput.value = '';
+                updateUI();
+            } else if (!name) {
+                alert('メンバー名を入力してください。');
+            } else {
+                alert('同じ名前のメンバーが既に存在します。');
+            }
+        }
+        
+        function removeMember(id) {
+            if (confirm('このメンバーを削除しますか？関連する支払いもすべて削除されます。')) {
+                members = members.filter(m => m.id !== id);
+                payments = payments.filter(p => p.memberId !== id);
+                updateUI();
+            }
+        }
+
+        function addPayment() {
+            const paidBySelect = document.getElementById('paidBy');
+            const amountInput = document.getElementById('amount');
+            const descriptionInput = document.getElementById('description');
+
+            const memberId = parseInt(paidBySelect.value);
+            const amount = parseFloat(amountInput.value);
+            const description = descriptionInput.value.trim();
+
+            if (memberId && amount > 0 && description) {
+                payments.push({ memberId, amount, description });
+                amountInput.value = '';
+                descriptionInput.value = '';
+                updateUI();
+            } else {
+                alert('すべての項目を正しく入力してください。');
+            }
+        }
+        
+        function removePayment(index) {
+            if(confirm('この支払いを削除しますか？')) {
+                payments.splice(index, 1);
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            renderMembers();
+            const summary = calculateSummary();
+            renderSummary(summary);
+            renderPaymentStatus(summary.balances);
+            renderSettlement(summary.balances);
+            renderPaymentHistory();
+            saveToLocalStorage();
+        }
+
+        function renderMembers() {
+            const memberList = document.getElementById('memberList');
+            const paidBySelect = document.getElementById('paidBy');
+
+            memberList.innerHTML = '';
+            paidBySelect.innerHTML = '<option value="">選択してください</option>';
+
+            if (members.length === 0) {
+                 memberList.innerHTML = '<p class="text-gray-500 text-sm">まだメンバーがいません。</p>';
+            }
+
+            members.forEach(member => {
+                // メンバーリストの表示
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center bg-gray-50 p-2 rounded-md';
+                li.innerHTML = `
+                    <span class="text-gray-700">${member.name}</span>
+                    <button onclick="removeMember(${member.id})" class="text-red-500 hover:text-red-700 text-sm"><i class="fas fa-trash-alt"></i></button>
+                `;
+                memberList.appendChild(li);
+
+                // ドロップダウンのオプション
+                const option = document.createElement('option');
+                option.value = member.id;
+                option.textContent = member.name;
+                paidBySelect.appendChild(option);
+            });
+        }
+        
+        function calculateSummary() {
+            const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+            const memberCount = members.length;
+            const perPersonAmount = memberCount > 0 ? totalAmount / memberCount : 0;
+
+            const balances = members.map(member => {
+                const paid = payments
+                    .filter(p => p.memberId === member.id)
+                    .reduce((sum, p) => sum + p.amount, 0);
+                return {
+                    ...member,
+                    paid: paid,
+                    balance: paid - perPersonAmount,
+                };
+            });
+            
+            return { totalAmount, memberCount, perPersonAmount, balances };
+        }
+
+        function renderSummary(summary) {
+            document.getElementById('totalAmount').textContent = `${Math.round(summary.totalAmount).toLocaleString()} 円`;
+            document.getElementById('memberCount').textContent = `${summary.memberCount} 人`;
+            document.getElementById('perPersonAmount').textContent = `${Math.round(summary.perPersonAmount).toLocaleString()} 円`;
+        }
+
+        function renderPaymentStatus(balances) {
+            const paymentStatusDiv = document.getElementById('paymentStatus');
+            paymentStatusDiv.innerHTML = '';
+            
+            if (balances.length === 0) {
+                paymentStatusDiv.innerHTML = '<p class="text-gray-500 text-center">メンバーを追加してください。</p>';
+                return;
+            }
+
+            balances.forEach(b => {
+                const balanceClass = b.balance >= 0 ? 'result-positive' : 'result-negative';
+                const sign = b.balance >= 0 ? '+' : '';
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-baseline';
+                div.innerHTML = `
+                    <span class="font-medium text-gray-700">${b.name}</span>
+                    <div class="text-right">
+                        <span class="${balanceClass}">${sign}${Math.round(b.balance).toLocaleString()} 円</span>
+                        <p class="text-xs text-gray-500">支払額: ${b.paid.toLocaleString()} 円</p>
+                    </div>
+                `;
+                paymentStatusDiv.appendChild(div);
+            });
+        }
+        
+        function renderSettlement(balances) {
+            const settlementDiv = document.getElementById('settlement');
+            settlementDiv.innerHTML = '';
+            
+            if (members.length < 2) {
+                 settlementDiv.innerHTML = '<p class="text-gray-500 text-center">メンバーが2人以上必要です。</p>';
+                 return;
+            }
+
+            const debtors = balances.filter(b => b.balance < 0).map(b => ({ ...b, balance: -b.balance }));
+            const creditors = balances.filter(b => b.balance > 0);
+            
+            if (debtors.length === 0 || creditors.length === 0) {
+                settlementDiv.innerHTML = '<p class="text-green-600 text-center font-semibold">🎉 全員精算済みです！</p>';
+                return;
+            }
+
+            const transactions = [];
+            debtors.sort((a, b) => a.balance - b.balance);
+            creditors.sort((a, b) => a.balance - b.balance);
+
+            let debtorIndex = 0;
+            let creditorIndex = 0;
+
+            while (debtorIndex < debtors.length && creditorIndex < creditors.length) {
+                const debtor = debtors[debtorIndex];
+                const creditor = creditors[creditorIndex];
+                const amount = Math.min(debtor.balance, creditor.balance);
+                
+                if (amount > 0.1) { // 小数点誤差を考慮
+                     transactions.push({ from: debtor.name, to: creditor.name, amount });
+                }
+
+                debtor.balance -= amount;
+                creditor.balance -= amount;
+
+                if (debtor.balance < 0.1) debtorIndex++;
+                if (creditor.balance < 0.1) creditorIndex++;
+            }
+            
+            transactions.forEach(t => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-2 bg-blue-50 rounded-lg';
+                div.innerHTML = `
+                    <span class="font-medium text-red-600">${t.from}</span>
+                    <i class="fas fa-long-arrow-alt-right text-gray-500"></i>
+                    <span class="font-medium text-green-600">${t.to}</span>
+                    <span class="font-bold text-blue-800">${Math.round(t.amount).toLocaleString()} 円</span>
+                `;
+                settlementDiv.appendChild(div);
+            });
+        }
+        
+        function renderPaymentHistory() {
+            const historyDiv = document.getElementById('paymentHistory');
+            historyDiv.innerHTML = '';
+
+            if (payments.length === 0) {
+                historyDiv.innerHTML = '<p class="text-gray-500 text-center">まだ支払いがありません。</p>';
+                return;
+            }
+            
+            // 新しい支払いが上に来るように逆順で表示
+            [...payments].reverse().forEach((p, index) => {
+                const member = members.find(m => m.id === p.memberId);
+                if (member) {
+                     const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center p-2 border-b';
+                    const originalIndex = payments.length - 1 - index;
+                    div.innerHTML = `
+                        <div>
+                            <p class="font-semibold text-gray-800">${p.description}</p>
+                            <p class="text-sm text-gray-500">支払った人: ${member.name}</p>
+                        </div>
+                        <div class="text-right">
+                             <p class="font-bold text-gray-800">${p.amount.toLocaleString()} 円</p>
+                             <button onclick="removePayment(${originalIndex})" class="text-red-500 hover:text-red-700 text-xs mt-1"><i class="fas fa-times-circle"></i> 削除</button>
+                        </div>
+                    `;
+                    historyDiv.appendChild(div);
+                }
+            });
+        }
+        
+        // ローカルストレージへの保存と読み込み
+        function saveToLocalStorage() {
+            const data = { members, payments, nextMemberId };
+            localStorage.setItem('warikanAppData', JSON.stringify(data));
+        }
+
+        function loadFromLocalStorage() {
+            const data = localStorage.getItem('warikanAppData');
+            if (data) {
+                const parsedData = JSON.parse(data);
+                members = parsedData.members || [];
+                payments = parsedData.payments || [];
+                nextMemberId = parsedData.nextMemberId || 1;
+            }
+        }
+
+    </script>
+</body>
+</html>
